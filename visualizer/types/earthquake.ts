@@ -1,3 +1,5 @@
+//Earthquake Features Type (Contains the properties to locate the affected area)
+
 export interface EarthquakeFeature {
   type: "Feature";
   properties: {
