@@ -3,7 +3,7 @@
 export interface EarthquakeFeature {
   type: "Feature";
   properties: {
-    magnitude: number;
+    mag: number;
     place: string;
     time: number;
     title: string;
