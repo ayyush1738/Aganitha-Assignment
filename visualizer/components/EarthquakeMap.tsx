@@ -1,6 +1,7 @@
 "use client";
 
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import { EarthquakeData } from "@/types/earthquake";
 import "leaflet/dist/leaflet.css";
 
 //Earthquake Features Type (Contains the properties to locate the affected area)
@@ -42,17 +43,15 @@ const EarthquakeMap: React.FC<EarthquakeMapProps> = ({ earthquakes }) => {
         const { title, magnitude, time } = earthquake.properties;
         const date = new Date(time);
 
-        // Leaflet expects [latitude, longitude]
         const position: [number, number] = [coordinates[1], coordinates[0]];
 
-        // Circle size scaled by magnitude (adjust multiplier as needed)
         const radius = magnitude * 20000; 
 
         return (
           <CircleMarker
             key={earthquake.id}
             center={position}
-            radius={magnitude * 4} // marker size based on magnitude
+            radius={magnitude * 4} 
             color="red"
             fillColor="red"
             fillOpacity={0.4}

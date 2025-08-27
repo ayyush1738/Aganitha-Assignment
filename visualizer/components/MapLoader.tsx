@@ -2,18 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import { useMemo } from 'react';
+import { EarthquakeData } from "@/types/earthquake";
 
-interface EarthquakeFeature {
-  type: "Feature";
-  properties: { mag: number; place: string; time: number; title: string; };
-  geometry: { type: "Point"; coordinates: [number, number, number]; };
-  id: string;
-}
-
-interface EarthquakeData {
-  type: "FeatureCollection";
-  features: EarthquakeFeature[];
-}
 
 interface MapLoaderProps {
   earthquakes: EarthquakeData;
