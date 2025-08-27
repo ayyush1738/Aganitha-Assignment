@@ -88,8 +88,8 @@ function haversineDistance(coord1: { lat: number; lon: number }, coord2: { lat: 
 
 ```bash
 # Clone repo
-git clone <repo-url>
-cd earthquake-map-notes
+git clone <https://github.com/ayyush1738/Aganitha-Assignment.git>
+cd visualizer
 
 # Install dependencies
 npm install
@@ -111,7 +111,6 @@ Visit 👉 `http://localhost:3000`
 
 ## 📷 Screenshots 
 
-*Add screenshots of the map, search filters, and AI notes popup here.*
 ![Map screenshot](images/image.png)
 
 ---
