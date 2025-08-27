@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Search as SearchIcon, X } from "lucide-react";
+import { Search as SearchIcon, X, Loader2 } from "lucide-react";
 import axios from "axios";
 
 const roles = ["Asia", "North America", "South America", "Europe", "Africa", "Antarctica", "Australia",];
@@ -24,7 +24,8 @@ export default function SearchBar({ onResults }: SearchBarProps) {
   const [selectedContinents, setSelectedContinents] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [days, setDays] = useState<number>(1);
-  const [loading, setLoading] = useState(false);
+  const [seacrhLoading, setSearchLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -38,7 +39,7 @@ export default function SearchBar({ onResults }: SearchBarProps) {
   const removeRole = (continents: string) => setSelectedContinents(selectedContinents.filter(c => c !== continents));
 
   const handleSearch = async () => {
-    setLoading(true);
+    setSearchLoading(true);
     setError(null);
     //Earthquake api-1, to feed all the features provided in Json format
     try {
@@ -53,7 +54,7 @@ export default function SearchBar({ onResults }: SearchBarProps) {
         "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson";
       const defaultResp = await axios.get(defaultUrl);
       let features = defaultResp.data.features;
-      
+
       features = features.filter((f: any) => f.properties.mag >= minMagnitude);
       //Filtering logic for date from features
       features = features.filter((f: any) => {
@@ -105,14 +106,14 @@ export default function SearchBar({ onResults }: SearchBarProps) {
       setAiNotes(null); // Clear previous notes
     } catch (err) {
       console.error(err);
-      setError("Failed to fetch earthquake data. Try again later.");
+      setError("Failed to fetch earthquake data. Check your network or Try again later.");
     }
-    setLoading(false);
+    setSearchLoading(false);
   };
 
   //Using groq from SSR to create notes
   const getAiNotes = async () => {
-    setLoading(true);
+    setAiLoading(true);
     setError(null);
     setAiNotes(""); // Reset
 
@@ -173,10 +174,10 @@ export default function SearchBar({ onResults }: SearchBarProps) {
       onResults({ features, aiNotes: data.notes });
     } catch (err) {
       console.error(err);
-      setError("Failed to generate AI notes. Try again later.");
+      setError("Failed to generate AI notes. Check your network or Try again later.");
     }
 
-    setLoading(false);
+    setAiLoading(false);
   };
 
   function haversineDistance(coord1: { lat: number; lon: number }, coord2: { lat: number; lon: number }) {
@@ -222,11 +223,15 @@ export default function SearchBar({ onResults }: SearchBarProps) {
             size="sm"
             className="rounded-full px-3 sm:px-4 bg-white text-green-500 cursor-pointer"
             onClick={handleSearch}
-            disabled={loading}
+            disabled={seacrhLoading}
           >
             <SearchIcon className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
         </div>
+
+
+        {error && <p className="text-red-600 mb-4">{error}</p>}
+
 
         <div className="flex text-xs sm:text-sm justify-center flex-wrap gap-2 sm:gap-3 mb-6 sm:mb-8 mt-6 sm:mt-10">
           {roles.map((role) => (
@@ -312,21 +317,34 @@ export default function SearchBar({ onResults }: SearchBarProps) {
 
           <div className="md:mt-10 w-full flex flex-row gap-2">
             <Button
-              className="bg-black/60 text-white px-6 w-1/2 sm:w-full rounded-lg hover:bg-black/80 cursor-pointer text-sm sm:text-base"
+              className="bg-black/60 text-white px-6 w-1/2 sm:w-full rounded-lg hover:bg-black/80 cursor-pointer text-sm sm:text-base flex items-center justify-center gap-2"
               onClick={handleSearch}
-              disabled={loading}
+              disabled={seacrhLoading}
             >
-              Search
+              {seacrhLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Searching...
+                </>
+              ) : (
+                "Search"
+              )}
             </Button>
 
             <Button
-              className="bg-green-600 text-white px-6 w-1/2 sm:w-full rounded-lg hover:bg-green-800 cursor-pointer text-sm sm:text-base"
+              className="bg-green-600 text-white px-6 w-1/2 sm:w-full rounded-lg hover:bg-green-800 cursor-pointer text-sm sm:text-base flex items-center justify-center gap-2"
               onClick={getAiNotes}
-              disabled={loading}
+              disabled={aiLoading}
             >
-              Get AI Notes
+              {aiLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Generating...
+                </>
+              ) : (
+                "Get AI Notes"
+              )}
             </Button>
           </div>
+
 
           {aiNotes && (
             <div className="fixed inset-0 mx-auto w-[80%] md:h-full md:w-[50%] flex items-center md:ml-[10%] z-100">
