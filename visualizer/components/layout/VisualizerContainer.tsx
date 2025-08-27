@@ -1,130 +1,173 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Search as SearchIcon, X } from "lucide-react";
 import axios from "axios";
-import { EarthquakeFeature, EarthquakeData } from "@/types/earthquake";
+import SearchBarUI from "@/components/ui/VisualizerUi"; // <-- New UI Component
 
-interface SearchBarContainerProps {
-  onResults: (features: EarthquakeFeature[], aiNotes?: string) => void;
+const roleCoordinates: Record<string, { lat: number; lon: number; radius: number }> = {
+  Asia: { lat: 34.0479, lon: 100.6197, radius: 5000 },
+  "North America": { lat: 54.526, lon: -105.2551, radius: 5000 },
+  "South America": { lat: -8.7832, lon: -55.4915, radius: 4000 },
+  Europe: { lat: 54.526, lon: 15.2551, radius: 4000 },
+  Africa: { lat: 8.7832, lon: 34.5085, radius: 5000 },
+  Antarctica: { lat: -82.8628, lon: 135.0, radius: 2500 },
+  Australia: { lat: -25.2744, lon: 133.7751, radius: 3000 },
+};
+
+interface SearchBarProps {
+  onResults: (data: any) => void;
 }
 
-export default function SearchBarContainer({ onResults }: SearchBarContainerProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [aiNotes, setAiNotes] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [minMagnitude, setMinMagnitude] = useState<number>(0);
-  const [maxMagnitude, setMaxMagnitude] = useState<number>(10);
+export default function SearchBarContainer({ onResults }: SearchBarProps) {
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [query, setQuery] = useState("");
   const [days, setDays] = useState<number>(1);
-  const [date, setDate] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [minMagnitude, setMinMagnitude] = useState<number>(3);
+  const [aiNotes, setAiNotes] = useState<string | null>(null);
 
-  const fetchEarthquakes = async () => {
-    try {
-      setLoading(true);
-
-      // USGS feed
-      const defaultResp = await axios.get<EarthquakeData>(
-        "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
-      );
-
-      let features: EarthquakeFeature[] = defaultResp.data.features;
-
-      // filter by magnitude
-      features = features.filter(
-        (f: EarthquakeFeature) =>
-          f.properties.magnitude >= minMagnitude &&
-          f.properties.magnitude <= maxMagnitude
-      );
-
-      // optional date filter (USGS returns unix timestamp in ms)
-      if (date) {
-        const selectedDate = new Date(date);
-        features = features.filter((f: EarthquakeFeature) => {
-          const quakeDate = new Date(f.properties.time);
-          return (
-            quakeDate.getFullYear() === selectedDate.getFullYear() &&
-            quakeDate.getMonth() === selectedDate.getMonth() &&
-            quakeDate.getDate() === selectedDate.getDate()
-          );
-        });
-      }
-
-      // send results to parent
-      onResults(features, aiNotes ?? undefined);
-    } catch (error) {
-      console.error("Error fetching earthquakes:", error);
-    } finally {
-      setLoading(false);
-    }
+  const handleRoleClick = (role: string) => {
+    if (!selectedRoles.includes(role)) setSelectedRoles([...selectedRoles, role]);
   };
 
+  const removeRole = (role: string) => setSelectedRoles(selectedRoles.filter(r => r !== role));
+
+  const handleSearch = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const now = new Date();
+      const startDate: Date = fromDate ? new Date(fromDate) : new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      const endDate: Date = toDate ? new Date(toDate) : now;
+
+      // Default feed
+      const defaultUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson";
+      const defaultResp = await axios.get(defaultUrl);
+      let features = defaultResp.data.features;
+
+      // Filter by mag, time, place
+      features = features
+        .filter((f: any) => f.properties.mag >= minMagnitude)
+        .filter((f: any) => {
+          const quakeTime = new Date(f.properties.time);
+          return quakeTime >= startDate && quakeTime <= endDate;
+        });
+
+      if (query.trim()) {
+        features = features.filter((f: any) =>
+          f.properties.place?.toLowerCase().includes(query.toLowerCase())
+        );
+      }
+
+      // Filter by selected region
+      if (selectedRoles.length > 0) {
+        const coords = roleCoordinates[selectedRoles[0]];
+        if (coords) {
+          features = features.filter((f: any) => {
+            const [lon, lat] = f.geometry.coordinates;
+            return haversineDistance({ lat, lon }, { lat: coords.lat, lon: coords.lon }) <= coords.radius;
+          });
+        }
+      }
+
+      // Merge with FDSN API
+      const fdsnResp = await axios.get("https://earthquake.usgs.gov/fdsnws/event/1/query", {
+        params: {
+          format: "geojson",
+          starttime: startDate.toISOString().split("T")[0],
+          endtime: endDate.toISOString().split("T")[0],
+          minmagnitude: minMagnitude,
+          orderby: "time",
+          ...(selectedRoles.length > 0 ? roleCoordinates[selectedRoles[0]] : {}),
+        },
+      });
+
+      const allFeatures = [...features, ...fdsnResp.data.features];
+      onResults({ features: allFeatures });
+      setAiNotes(null);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch earthquake data. Try again later.");
+    }
+
+    setLoading(false);
+  };
+
+  const getAiNotes = async () => {
+    setLoading(true);
+    setError(null);
+    setAiNotes("");
+
+    try {
+      const now = new Date();
+      const startDate: Date = fromDate ? new Date(fromDate) : new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      const endDate: Date = toDate ? new Date(toDate) : now;
+
+      const defaultUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson";
+      const defaultResp = await axios.get(defaultUrl);
+      let features = defaultResp.data.features.filter((f: any) => f.properties.mag >= minMagnitude);
+
+      features = features.filter((f: any) => {
+        const quakeTime = new Date(f.properties.time);
+        return quakeTime >= startDate && quakeTime <= endDate;
+      });
+
+      const earthquakeText = features
+        .map((f: any) => {
+          const date = new Date(f.properties.time).toLocaleString();
+          return `Place: ${f.properties.place}, Magnitude: ${f.properties.mag}, Date: ${date}`;
+        })
+        .join("\n");
+
+      const res = await fetch("/api/groq", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: earthquakeText }),
+      });
+
+      if (!res.ok) throw new Error("Groq API failed");
+      const data = await res.json();
+
+      setAiNotes(data.notes);
+      onResults({ features, aiNotes: data.notes });
+    } catch (err) {
+      console.error(err);
+      setError("Failed to generate AI notes. Try again later.");
+    }
+
+    setLoading(false);
+  };
+
+  function haversineDistance(coord1: { lat: number; lon: number }, coord2: { lat: number; lon: number }) {
+    const R = 6371;
+    const dLat = ((coord2.lat - coord1.lat) * Math.PI) / 180;
+    const dLon = ((coord2.lon - coord1.lon) * Math.PI) / 180;
+    const lat1 = (coord1.lat * Math.PI) / 180;
+    const lat2 = (coord2.lat * Math.PI) / 180;
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.sin(dLon / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
   return (
-    <div className="flex flex-col gap-4 items-center p-4 border rounded-lg shadow-md bg-white w-full">
-      {/* Search bar */}
-      <div className="flex items-center gap-2 w-full">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by place..."
-          className="flex-1 px-4 py-2 border rounded-lg focus:outline-none"
-        />
-        <Button onClick={fetchEarthquakes} disabled={loading}>
-          {loading ? "Searching..." : <SearchIcon className="w-4 h-4" />}
-        </Button>
-      </div>
-
-      {/* Magnitude filters */}
-      <div className="flex gap-3 w-full">
-        <input
-          type="number"
-          value={minMagnitude}
-          onChange={(e) => setMinMagnitude(Number(e.target.value))}
-          placeholder="Min Mag"
-          className="w-1/2 px-3 py-2 border rounded-lg"
-        />
-        <input
-          type="number"
-          value={maxMagnitude}
-          onChange={(e) => setMaxMagnitude(Number(e.target.value))}
-          placeholder="Max Mag"
-          className="w-1/2 px-3 py-2 border rounded-lg"
-        />
-      </div>
-
-      {/* Date filter */}
-      <div className="flex gap-3 w-full">
-        <select
-          value={days}
-          onChange={(e) => setDays(Number(e.target.value))}
-          className="w-1/2 px-3 py-2 border rounded-lg"
-        >
-          <option value={1}>Past Day</option>
-          <option value={7}>Past 7 Days</option>
-          <option value={30}>Past 30 Days</option>
-        </select>
-
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-1/2 px-3 py-2 border rounded-lg"
-        />
-      </div>
-
-      {/* Optional AI notes popup */}
-      {aiNotes && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white border p-4 rounded-lg shadow-lg max-w-md w-full">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-semibold">AI Notes</h3>
-            <button onClick={() => setAiNotes(null)}>
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <p className="text-sm text-gray-700">{aiNotes}</p>
-        </div>
-      )}
-    </div>
+    <SearchBarUI
+      {...{
+        query, setQuery,
+        selectedRoles, setSelectedRoles, handleRoleClick, removeRole,
+        days, setDays,
+        minMagnitude, setMinMagnitude,
+        fromDate, setFromDate,
+        toDate, setToDate,
+        handleSearch, getAiNotes,
+        aiNotes, setAiNotes,
+        loading, error
+      }}
+    />
   );
 }
