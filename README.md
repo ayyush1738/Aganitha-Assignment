@@ -88,7 +88,7 @@ function haversineDistance(coord1: { lat: number; lon: number }, coord2: { lat: 
 
 ```bash
 # Clone repo
-git clone <https://github.com/ayyush1738/Aganitha-Assignment.git>
+git clone https://github.com/ayyush1738/Aganitha-Assignment.git
 cd visualizer
 
 # Install dependencies
