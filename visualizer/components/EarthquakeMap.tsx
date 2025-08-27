@@ -1,5 +1,3 @@
-"use client";
-
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { EarthquakeData } from "@/types/earthquake";

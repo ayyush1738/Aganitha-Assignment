@@ -248,7 +248,7 @@ export default function SearchBar({ onResults }: SearchBarProps) {
           ))}
         </div>
 
-        <div className="flex flex-col justify-center items-center gap-4 mb-6 sm:mb-8 mt-6 sm:mt-[10%]">
+        <div className="flex flex-col w-auto justify-center items-center gap-4 mb-6 sm:mb-8 mt-6 sm:mt-[10%]">
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-3/4 flex-wrap justify-center items-center text-white">
             <div className="flex flex-col w-full sm:w-auto">
               <label className="mb-1 text-xs sm:text-sm">Days</label>
