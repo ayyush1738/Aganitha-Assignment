@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import MapLoader from "@/components/MapLoader";
-import VisualizerContainer from "@/components/layout/VisualizerContainer";
+import SearchBar from "@/components/layout/VisualizerContainer";
 import { EarthquakeData } from "@/types/earthquake";
-
 
 export default function Hero() {
   const [earthquakeData, setEarthquakeData] = useState<EarthquakeData | null>(
@@ -20,7 +19,7 @@ export default function Hero() {
         <div
           className={`transition-all w-full ${earthquakeData ? "md:w-1/2" : "md:w-full"}`}
         >
-          <VisualizerContainer onResults={setEarthquakeData} />
+          <SearchBar onResults={setEarthquakeData} />
         </div>
 
         {/* Right: Map */}
