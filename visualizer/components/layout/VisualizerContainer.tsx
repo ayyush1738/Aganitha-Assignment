@@ -5,7 +5,7 @@ import axios from "axios";
 
 const roles = ["Asia", "North America", "South America", "Europe", "Africa", "Antarctica", "Australia",];
 const daysOptions = [1, 3, 10, 20, 30];
-
+//Co-ordinates of continents
 const roleCoordinates: Record<string, { lat: number; lon: number; radius: number }> = {
   Asia: { lat: 34.0479, lon: 100.6197, radius: 5000 },
   "North America": { lat: 54.526, lon: -105.2551, radius: 5000 },
@@ -40,9 +40,10 @@ export default function SearchBar({ onResults }: SearchBarProps) {
   const handleSearch = async () => {
     setLoading(true);
     setError(null);
-
+    //Earthquake api-1, to feed all the features provided in Json format
     try {
       const now = new Date();
+      //Filtering the date
       const startDate: Date = fromDate
         ? new Date(fromDate)
         : new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
@@ -52,9 +53,9 @@ export default function SearchBar({ onResults }: SearchBarProps) {
         "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson";
       const defaultResp = await axios.get(defaultUrl);
       let features = defaultResp.data.features;
-
+      
       features = features.filter((f: any) => f.properties.mag >= minMagnitude);
-
+      //Filtering logic for date from features
       features = features.filter((f: any) => {
         const quakeTime = new Date(f.properties.time);
         return quakeTime >= startDate && quakeTime <= endDate;
@@ -65,7 +66,7 @@ export default function SearchBar({ onResults }: SearchBarProps) {
           f.properties.place?.toLowerCase().includes(query.toLowerCase())
         );
       }
-
+      //Search according to continents (lattitude: lat, longitude: lon, radius)
       if (selectedContinents.length > 0) {
         const coords = roleCoordinates[selectedContinents[0]];
         if (coords) {
@@ -93,6 +94,7 @@ export default function SearchBar({ onResults }: SearchBarProps) {
           fdsnParams.maxradiuskm = coords.radius;
         }
       }
+      //Api-2 to search with parameters along with features
       const fdsnResp = await axios.get(
         "https://earthquake.usgs.gov/fdsnws/event/1/query",
         { params: fdsnParams }
@@ -100,16 +102,15 @@ export default function SearchBar({ onResults }: SearchBarProps) {
 
       const allFeatures = [...features, ...fdsnResp.data.features];
       onResults({ features: allFeatures });
-
       setAiNotes(null); // Clear previous notes
     } catch (err) {
       console.error(err);
       setError("Failed to fetch earthquake data. Try again later.");
     }
-
     setLoading(false);
   };
 
+  //Using groq from SSR to create notes
   const getAiNotes = async () => {
     setLoading(true);
     setError(null);
@@ -143,7 +144,7 @@ export default function SearchBar({ onResults }: SearchBarProps) {
 
       const prompt = `
       Persona: You are a helpful AI assistant.
-      
+
       Task:
       Analyze Earthquake Data: I will provide you with JSON data containing information about recent earthquakes. This data includes the dates, magnitudes, and locations of each event.
       Generate a Descriptive Study: Create a concise and easy-to-understand descriptive study based on the provided data.
@@ -328,7 +329,7 @@ export default function SearchBar({ onResults }: SearchBarProps) {
           </div>
 
           {aiNotes && (
-            <div className="fixed inset-0 w-[50%] flex items-center ml-[10%] z-50">
+            <div className="fixed inset-0 mx-auto w-[80%] md:h-full md:w-[50%] flex items-center md:ml-[10%] z-100">
               <div className="relative bg-white text-black rounded-2xl shadow-xl p-6 w-[90%] sm:w-[600px] max-h-[80vh] overflow-y-auto">
                 <button
                   className="absolute top-3 right-3 cursor-pointer text-gray-600 hover:text-black"
