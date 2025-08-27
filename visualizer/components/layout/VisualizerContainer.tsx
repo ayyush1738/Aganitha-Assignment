@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Search as SearchIcon, X } from "lucide-react";
 import axios from "axios";
-import { EarthquakeFeature, EarthquakeData } from "@/types";
+import { EarthquakeFeature, EarthquakeData } from "@/types/earthquake";
 
 interface SearchBarContainerProps {
   onResults: (features: EarthquakeFeature[], aiNotes?: string) => void;
