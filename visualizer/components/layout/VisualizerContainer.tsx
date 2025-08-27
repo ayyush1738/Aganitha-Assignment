@@ -142,8 +142,19 @@ export default function SearchBar({ onResults }: SearchBarProps) {
         .join("\n");
 
       const prompt = `
-      Please create a descriptive study on the following earthquake results by reading the Json data
-      which includes the dates, magnitude, and possible reasons for the earthquakes (Mention that in notes), please don't create any table and give the answer in ver simple words:
+      Persona: You are a helpful AI assistant.
+      
+      Task:
+      Analyze Earthquake Data: I will provide you with JSON data containing information about recent earthquakes. This data includes the dates, magnitudes, and locations of each event.
+      Generate a Descriptive Study: Create a concise and easy-to-understand descriptive study based on the provided data.
+      Synthesize Key Information: Your study should summarize the following:
+      Dates and Frequency: Briefly mention the time period the data covers and any notable patterns in when the earthquakes occurred.
+      Magnitude Analysis: Describe the range of earthquake magnitudes observed, highlighting the most common or any significantly strong events.
+      Potential Causes (as "Notes"): In a dedicated "Notes" section, hypothesize the possible geological reasons for the earthquakes in the specified locations. This may include proximity to fault lines, tectonic plate interactions, or volcanic activity.
+      Format and Constraints:
+      No Tables: Do not use any tables in your response.
+      Simple Language: Present the information in very simple and clear terms that a non-expert can easily understand.
+      Structure: The output should be a narrative summary followed by a "Notes" section for the potential causes.
 
       ${earthquakeText}
     `;
